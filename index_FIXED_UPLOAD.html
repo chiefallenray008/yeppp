@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Waves of Protection Insurance — Team Tracker (Standalone)</title>
+  <!-- Tailwind CDN (Play) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* Nice dark gradient background */
+    body { background: linear-gradient(to bottom, #0b1220, #0a0f1a); }
+    .card { background: rgba(15, 23, 42, 0.7); border: 1px solid #1f2937; }
+    .input { background: #0b1220; border: 1px solid #1f2937; color: #e5e7eb; }
+    .btn { background: #0ea5e9; color: white; }
+    .btn:hover { filter: brightness(1.05); }
+    .badge { background: #0b1220; border: 1px solid #1f2937; color:#cbd5e1; padding:2px 8px; border-radius:999px; font-size:12px; }
+  </style>
+</head>
+<body class="text-slate-100 p-4 sm:p-6">
+  <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Waves of Protection Insurance</h1>
+      <p class="text-slate-300">Team Tracker • Medicare • Life • Hospital Indemnity • CHAS • Transfers</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="exportBtn" class="btn px-3 py-2 rounded">Export JSON</button>
+      <label class="px-3 py-2 rounded card cursor-pointer">
+        <span>Import</span>
+        <input id="importInput" type="file" accept="application/json" class="hidden" />
+      </label>
+    </div>
+  </header>
+
+  <div id="warn" class="hidden mt-3 p-3 rounded border border-amber-500/40 bg-amber-500/10 text-amber-200">⚠️ Saving is disabled (localStorage not available). Use a normal (non-private) tab or enable storage.</div>
+<hr class="my-4 border-slate-800"/>
+
+  <!-- Top row: Quote + Date -->
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+    <div class="card p-4 xl:col-span-2">
+      <div class="text-lg font-semibold mb-2 flex items-center gap-2">✨ Daily Inspiration</div>
+      <div id="quote" class="text-xl sm:text-2xl font-medium"></div>
+    </div>
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2 flex items-center gap-2">📅 Date</div>
+      <div class="flex items-center gap-2">
+        <input id="dateInput" type="date" class="input rounded px-3 py-2" />
+        <button id="todayBtn" class="px-3 py-2 rounded border border-slate-700">Today</button>
+        <span id="savedBadge" class="hidden badge">Saved ✅</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry + Team -->
+  <section class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card p-4 lg:col-span-2">
+      <div class="text-lg font-semibold mb-3">📝 Quick Entry — <span id="dateLabel"></span></div>
+      <div class="grid sm:grid-cols-3 gap-3">
+        <div>
+          <label class="text-slate-300 text-sm">Team Member</label>
+          <select id="memberSelect" class="input rounded px-3 py-2 w-full mt-1"></select>
+        </div>
+        <div class="sm:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div><label class="text-sm">Medicare Submitted</label><input id="med_sub" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">Medicare Approved</label><input id="med_app" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">Life Submitted</label><input id="life_sub" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">Life Presentations</label><input id="life_pres" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">Life AP ($)</label><input id="life_ap" type="number" step="50" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">Hospital Indemnity Plans</label><input id="hi_plans" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">CHAS Plans</label><input id="chas_plans" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+          <div><label class="text-sm">Transfers</label><input id="transfers" type="number" class="input w-full rounded px-2 py-2 mt-1" /></div>
+        </div>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2 items-center">
+        <button id="saveBtn" class="btn px-3 py-2 rounded">Save Today</button>
+        <span id="savedBadge" class="hidden badge">Saved ✅</span>
+      </div>
+    </div>
+
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">👥 Team</div>
+      <div class="flex gap-2">
+        <input id="newMember" placeholder="Add teammate (max 50)" class="input rounded px-3 py-2 w-full" />
+        <button id="addMemberBtn" class="btn px-3 py-2 rounded">Add</button>
+        <span id="savedBadge" class="hidden badge">Saved ✅</span>
+      </div>
+      <div id="teamList" class="mt-3 space-y-2 max-h-64 overflow-auto pr-1"></div>
+    </div>
+  </section>
+
+  <!-- Charts -->
+  <section class="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+    <div class="card p-4 xl:col-span-2">
+      <div class="text-lg font-semibold mb-2">📊 Daily Totals</div>
+      <canvas id="dailyTotalsChart" height="240"></canvas>
+    </div>
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">💵 AP Trend ($)</div>
+      <canvas id="apTrendChart" height="240"></canvas>
+    </div>
+  </section>
+
+  <!-- Leaderboards -->
+  <section class="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">🏆 Daily Leaderboard <span id="lbDate" class="badge"></span></div>
+      <ol id="dailyLB" class="space-y-2"></ol>
+    </div>
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">🏅 All-Time Leaderboard</div>
+      <ol id="allLB" class="space-y-2"></ol>
+    </div>
+  </section>
+
+  <!-- Today breakdown -->
+  <section class="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">Today — Medicare</div>
+      <div id="medicareToday" class="text-slate-300"></div>
+    </div>
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">Today — Life</div>
+      <div id="lifeToday" class="text-slate-300"></div>
+    </div>
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">Today — HI & CHAS</div>
+      <div id="mixToday" class="text-slate-300"></div>
+    </div>
+  </section>
+
+  <footer class="mt-10 text-center text-slate-500 text-sm">
+    © <span id="year"></span> Waves of Protection Insurance — Team Tracker (Standalone)
+  </footer>
+
+  <script>
+    // ---------- Utilities ----------
+    const APP_KEY = "waves-standalone-v1";
+    const QUOTES = [
+      "Small steps every day lead to big wins.",
+      "Serve first. Success follows.",
+      "Consistency beats intensity.",
+      "Your future self is watching. Make them proud.",
+      "Excellence is a habit—build it today.",
+      "Win the day. Then repeat.",
+      "People don’t care how much you know until they know how much you care.",
+      "You miss 100% of the shots you don’t take.",
+      "Make today count—for your clients and your goals.",
+      "Discipline is choosing what you want most over what you want now."
+    ];
+    const DEFAULT_MEMBERS = ["Chase Ray","Garrett","Francis","Bailey","BFree"].map((n,i)=>({id:"m"+(i+1),name:n,active:true}));
+    const POINTS = {
+      medicare_submitted: 1,
+      medicare_approved: 3,
+      life_submitted: 2,
+      life_presentations: 0.5,
+      life_ap_per_100: 1, // per $100 AP
+      hi_plans: 1.5,
+      chas_plans: 1.5,
+      transfers: 0.5,
+    };
+    const todayISO = () => new Date().toISOString().slice(0,10);
+    const dateLabel = (iso) => new Date(iso+"T00:00:00").toLocaleDateString(undefined,{month:"short", day:"numeric"});
+    const $ = (id) => document.getElementById(id);
+// Safe ID generator (works without crypto.randomUUID)
+function genId(){ return (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : ("m" + (Date.now()+Math.floor(Math.random()*1e6)).toString(36))); }
+// Detect if localStorage is available (not blocked by Private mode)
+function storageAvailable(){ try{ const x="__waves_test__"; localStorage.setItem(x,"1"); localStorage.removeItem(x); return true; } catch(e){ return false; } }
+
+
+    // ---------- State ----------
+    let state = { members: [], entries: {} }; // entries keyed `${date}|${memberId}`
+    function load(){
+  const can = storageAvailable();
+  if(!can){ const w=document.getElementById("warn"); if(w) w.classList.remove("hidden"); state = { members: DEFAULT_MEMBERS, entries: {} }; return; }
+  try{ const raw = localStorage.getItem(APP_KEY); if(raw) state = JSON.parse(raw); }catch(e){}
+  if(!state || !Array.isArray(state.members)) state = { members: [], entries: {} };
+  if(!state.members || state.members.length===0) state.members = DEFAULT_MEMBERS;
+  if(!state.entries) state.entries = {};
+};
+      } catch(e){ state = {members: DEFAULT_MEMBERS, entries: {}}; }
+    }
+    function save(){ if(!storageAvailable()) return; localStorage.setItem(APP_KEY, JSON.stringify(state)); }
+
+    // ---------- Rendering Helpers ----------
+    function ensureMemberOptions() {
+      const sel = $("memberSelect");
+      sel.innerHTML = "<option value=''>Select member</option>" + state.members.map(m=>{
+        const suffix = m.active ? "" : " (inactive)";
+        return \`<option value="\${m.id}">\${m.name}\${suffix}</option>\`;
+      }).join("");
+    }
+    function renderTeamList() {
+      const box = $("teamList");
+      box.innerHTML = "";
+      state.members.forEach(m => {
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between rounded border border-slate-800 bg-slate-900 px-3 py-2";
+        row.innerHTML = \`
+          <div class="flex items-center gap-3">
+            <input type="checkbox" \${m.active?"checked":""} data-id="\${m.id}" class="toggleActive">
+            <span class="font-medium">\${m.name}</span>
+            \${m.active?"":"<span class='text-xs text-slate-400'>(inactive)</span>"}
+          </div>
+          <button class="text-slate-300 hover:text-red-300 removeBtn" data-id="\${m.id}">🗑️</button>
+        \`;
+        box.appendChild(row);
+      });
+      // bind
+      box.querySelectorAll(".toggleActive").forEach(cb=>cb.addEventListener("change", e=>{
+        const id = e.target.getAttribute("data-id");
+        const m = state.members.find(x=>x.id===id);
+        if (m){ m.active = e.target.checked; save(); ensureMemberOptions(); renderTeamList(); updateAll();}
+      }));
+      box.querySelectorAll(".removeBtn").forEach(btn=>btn.addEventListener("click", e=>{
+        const id = e.target.getAttribute("data-id");
+        state.members = state.members.filter(x=>x.id!==id);
+        save(); ensureMemberOptions(); renderTeamList(); updateAll();
+      }));
+    }
+
+    function getEntry(date, memberId) {
+      const k = \`\${date}|\${memberId}\`;
+      return state.entries[k] || {
+        date, memberId,
+        medicare: {submitted:0, approved:0},
+        life: {submitted:0, presentations:0, ap:0},
+        hospital: {plans:0},
+        chas: {plans:0},
+        transfers: 0
+      };
+    }
+    function saveEntry(e) {
+      const k = \`\${e.date}|\${e.memberId}\`;
+      state.entries[k] = e;
+      save();
+    }
+
+    function perDateTotals() {
+      const map = {};
+      Object.values(state.entries).forEach(e=>{
+        if (!map[e.date]) map[e.date] = {date:e.date, ms:0, ma:0, ls:0, lp:0, ap:0, hi:0, ch:0, tr:0};
+        const d = map[e.date];
+        d.ms += e.medicare.submitted;
+        d.ma += e.medicare.approved;
+        d.ls += e.life.submitted;
+        d.lp += e.life.presentations;
+        d.ap += e.life.ap;
+        d.hi += e.hospital.plans;
+        d.ch += e.chas.plans;
+        d.tr += e.transfers;
+      });
+      return Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
+    }
+
+    function computeLeaderboard(dateFilter=null) {
+      const map = {};
+      Object.values(state.entries).forEach(e=>{
+        if (dateFilter && e.date!==dateFilter) return;
+        if (!map[e.memberId]) map[e.memberId] = {memberId:e.memberId, ms:0, ma:0, ls:0, lp:0, ap:0, hi:0, ch:0, tr:0, total:0, points:0};
+        const r = map[e.memberId];
+        r.ms += e.medicare.submitted;
+        r.ma += e.medicare.approved;
+        r.ls += e.life.submitted;
+        r.lp += e.life.presentations;
+        r.ap += e.life.ap;
+        r.hi += e.hospital.plans;
+        r.ch += e.chas.plans;
+        r.tr += e.transfers;
+        r.total += e.medicare.submitted + e.life.submitted + e.hospital.plans + e.chas.plans;
+      });
+      Object.values(map).forEach(r=>{
+        r.points =
+          r.ms * POINTS.medicare_submitted +
+          r.ma * POINTS.medicare_approved +
+          r.ls * POINTS.life_submitted +
+          r.lp * POINTS.life_presentations +
+          Math.floor(r.ap/100) * POINTS.life_ap_per_100 +
+          r.hi * POINTS.hi_plans +
+          r.ch * POINTS.chas_plans +
+          r.tr * POINTS.transfers;
+      });
+      const rows = Object.values(map).sort((a,b)=>b.points-a.points);
+      return rows;
+    }
+
+    function sumForDate(date) {
+      const res = {ms:0,ma:0,ls:0,lp:0,ap:0,hi:0,ch:0,tr:0};
+      Object.values(state.entries).forEach(e=>{
+        if (e.date!==date) return;
+        res.ms+=e.medicare.submitted; res.ma+=e.medicare.approved;
+        res.ls+=e.life.submitted; res.lp+=e.life.presentations; res.ap+=e.life.ap;
+        res.hi+=e.hospital.plans; res.ch+=e.chas.plans; res.tr+=e.transfers;
+      });
+      return res;
+    }
+
+    // ---------- Charts ----------
+    let dailyChart, apChart;
+    function renderCharts() {
+      if (typeof Chart === 'undefined') { return; }
+      const data = perDateTotals();
+      const labels = data.map(d=>dateLabel(d.date));
+      const ctx1 = $("dailyTotalsChart").getContext("2d");
+      const ctx2 = $("apTrendChart").getContext("2d");
+
+      if (dailyChart) dailyChart.destroy();
+      dailyChart = new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Medicare Approved", data: data.map(d=>d.ma) },
+            { label: "Life Submitted", data: data.map(d=>d.ls) },
+            { label: "HI Plans", data: data.map(d=>d.hi) },
+            { label: "CHAS Plans", data: data.map(d=>d.ch) },
+            { label: "Transfers", data: data.map(d=>d.tr) },
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color:"#e5e7eb" } } },
+          scales: {
+            x: { ticks: { color:"#cbd5e1" }, grid: { color:"#1f2937" } },
+            y: { ticks: { color:"#cbd5e1" }, grid: { color:"#1f2937" } }
+          }
+        }
+      });
+
+      if (apChart) apChart.destroy();
+      apChart = new Chart(ctx2, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Life AP ($)", data: data.map(d=>d.ap) }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color:"#e5e7eb" } } },
+          scales: {
+            x: { ticks: { color:"#cbd5e1" }, grid: { color:"#1f2937" } },
+            y: { ticks: { color:"#cbd5e1" }, grid: { color:"#1f2937" } }
+          }
+        }
+      });
+    }
+
+    // ---------- UI update ----------
+    function updateAll() {
+      // date label
+      const d = $("dateInput").value || todayISO();
+      $("dateLabel").textContent = dateLabel(d);
+      $("lbDate").textContent = dateLabel(d);
+
+      // quotes
+      const dd = new Date(d);
+      const hash = (dd.getFullYear()*10000 + (dd.getMonth()+1)*100 + dd.getDate()) % QUOTES.length;
+      $("quote").textContent = QUOTES[hash];
+
+      // breakdowns
+      const s = sumForDate(d);
+      $("medicareToday").innerHTML = \`Submitted: <b>\${s.ms}</b> · Approved: <b>\${s.ma}</b>\`;
+      $("lifeToday").innerHTML = \`Submitted: <b>\${s.ls}</b> · Presentations: <b>\${s.lp}</b> · AP: <b>$\${s.ap.toLocaleString()}</b>\`;
+      $("mixToday").innerHTML = \`HI Plans: <b>\${s.hi}</b> · CHAS Plans: <b>\${s.ch}</b> · Transfers: <b>\${s.tr}</b>\`;
+
+      // leaderboards
+      const daily = computeLeaderboard(d);
+      const all = computeLeaderboard(null);
+      renderLeaderboard("dailyLB", daily);
+      renderLeaderboard("allLB", all);
+
+      // charts
+      renderCharts();
+    }
+
+    function renderLeaderboard(elId, rows) {
+      const podium = ["🥇","🥈","🥉"];
+      const box = $(elId);
+      box.innerHTML = "";
+      if (rows.length===0) {
+        box.innerHTML = "<li class='text-slate-400'>No stats yet.</li>";
+        return;
+      }
+      rows.forEach((r, idx)=>{
+        const m = state.members.find(x=>x.id===r.memberId);
+        const li = document.createElement("li");
+        li.className = "flex items-center justify-between rounded bg-slate-900 border border-slate-800 px-3 py-2";
+        const rank = idx<3 ? podium[idx] : (idx+1) + ".";
+        li.innerHTML = \`
+          <div class="flex items-center gap-3">
+            <div class="text-xl w-8 text-center">\${rank}</div>
+            <div>
+              <div class="font-semibold">\${m?m.name:r.memberId}</div>
+              <div class="text-xs text-slate-400">Pts: \${Math.round(r.points*10)/10} • Med Approvals: \${r.ma} • Life AP: $\${r.ap.toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="text-sm text-slate-300">Apps: \${r.total} | Transfers: \${r.tr}</div>
+        \`;
+        box.appendChild(li);
+      });
+    }
+
+    // ---------- Event handlers ----------
+    function bind() {
+      $("todayBtn").addEventListener("click", ()=>{
+        $("dateInput").value = todayISO();
+        updateAll();
+      });
+      $("saveBtn").addEventListener("click", ()=>{
+        const date = $("dateInput").value || todayISO();
+        let memberId = $("memberSelect").value;
+        if (!memberId) {
+          const first = state.members.find(m=>m.active) || state.members[0];
+          if (first) { memberId = first.id; $("memberSelect").value = memberId; }
+          else { const id = genId(); state.members=[{id,name:"You",active:true}]; ensureMemberOptions(); renderTeamList(); memberId = id; $("memberSelect").value = id; }
+        }
+        const entry = getEntry(date, memberId);
+        entry.medicare.submitted = +($("med_sub").value||0);
+        entry.medicare.approved = +($("med_app").value||0);
+        entry.life.submitted = +($("life_sub").value||0);
+        entry.life.presentations = +($("life_pres").value||0);
+        entry.life.ap = +($("life_ap").value||0);
+        entry.hospital.plans = +($("hi_plans").value||0);
+        entry.chas.plans = +($("chas_plans").value||0);
+        entry.transfers = +($("transfers").value||0);
+        saveEntry(entry);
+        updateAll();
+        const sb=document.getElementById("savedBadge"); if(sb){ sb.classList.remove("hidden"); setTimeout(()=>sb.classList.add("hidden"),1400); }
+      });
+      $("addMemberBtn").addEventListener("click", ()=>{
+        const name = ($("newMember").value||"").trim();
+        if (!name) return;
+        if (state.members.length>=50) { alert("Limit of 50 team members reached."); return; }
+        const id = genId();
+        state.members.push({id,name,active:true});
+        $("newMember").value="";
+        save(); ensureMemberOptions(); renderTeamList();
+      });
+      $("importInput").addEventListener("change", (e)=>{
+        const file = e.target.files && e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const obj = JSON.parse(String(reader.result));
+            state = { members: obj.members||[], entries: obj.entries||{} };
+            save(); ensureMemberOptions(); renderTeamList(); updateAll();
+            alert("Imported ✅");
+          } catch(err){ alert("Invalid JSON file."); }
+        };
+        reader.readAsText(file);
+      });
+      $("exportBtn").addEventListener("click", ()=>{
+        const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "waves-tracker-data.json"; a.click();
+        URL.revokeObjectURL(url);
+      });
+      $("dateInput").addEventListener("change", updateAll);
+      $("memberSelect").addEventListener("change", ()=>{
+        const date = $("dateInput").value || todayISO();
+        const memberId = $("memberSelect").value;
+        if (!memberId) return;
+        const e = getEntry(date, memberId);
+        $("med_sub").value = e.medicare.submitted;
+        $("med_app").value = e.medicare.approved;
+        $("life_sub").value = e.life.submitted;
+        $("life_pres").value = e.life.presentations;
+        $("life_ap").value = e.life.ap;
+        $("hi_plans").value = e.hospital.plans;
+        $("chas_plans").value = e.chas.plans;
+        $("transfers").value = e.transfers;
+      });
+    }
+
+    // ---------- Init ----------
+    (function init(){
+      $("year").textContent = new Date().getFullYear();
+      $("dateInput").value = todayISO();
+      load();
+      ensureMemberOptions();
+      renderTeamList();
+      bind();
+      updateAll();
+    })();
+  </script>
+</body>
+</html>
