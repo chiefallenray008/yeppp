@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Waves of Protection Insurance — Team Tracker</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#0a0f1a; color:#e5e7eb; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 16px; }
+    .row { display:flex; flex-wrap:wrap; gap:16px; }
+    .card { background:#0f172a; border:1px solid #1f2937; border-radius:12px; padding:16px; box-sizing:border-box; }
+    .col-2 { flex: 2 1 620px; }
+    .col-1 { flex: 1 1 320px; }
+    .h1 { font-size: 28px; font-weight: 800; margin: 0 0 4px 0; }
+    .muted { color:#cbd5e1; font-size: 14px; }
+    .btn { background:#0ea5e9; color:#fff; border:0; border-radius:8px; padding:10px 12px; cursor:pointer; }
+    .btn:active { transform: translateY(1px); }
+    .input, .select { width:100%; background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; padding:8px 10px; border-radius:8px; box-sizing:border-box; }
+    label { display:block; font-size:12px; color:#cbd5e1; margin-bottom:4px; }
+    .grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
+    @media (min-width: 860px) { .grid-4 { grid-template-columns: repeat(4, 1fr); } }
+    .badge { display:inline-block; padding:2px 8px; border:1px solid #1f2937; border-radius:999px; font-size:12px; color:#cbd5e1; }
+    .list { max-height: 220px; overflow:auto; }
+    .rowline { display:flex; align-items:center; justify-content:space-between; background:#0b1220; border:1px solid #1f2937; padding:8px 12px; border-radius:8px; margin-bottom:8px; }
+    .warn { display:none; margin:12px 0; background: rgba(245, 158, 11, 0.12); border:1px solid rgba(245, 158, 11, .4); color:#fde68a; padding:10px 12px; border-radius:8px; }
+    .ok { display:none; margin-left:8px; color:#86efac; font-size:14px; }
+    a.link { color:#93c5fd; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div>
+        <div class="h1">Waves of Protection Insurance</div>
+        <div class="muted">Team Tracker • Medicare • Life • Hospital Indemnity • CHAS • Transfers</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="exportBtn" class="btn">Export JSON</button>
+        <label class="btn" style="background:#0f172a; border:1px solid #1f2937; color:#e5e7eb; cursor:pointer;">
+          Import <input id="importInput" type="file" accept="application/json" style="display:none;" />
+        </label>
+      </div>
+    </div>
+
+    <div id="warn" class="warn">⚠️ Saving is disabled (localStorage not available). Use a normal (non-private) tab or enable storage.</div>
+
+    <div class="row" style="margin-top:16px;">
+      <div class="card col-2">
+        <div style="font-weight:700; margin-bottom:6px;">✨ Daily Inspiration</div>
+        <div id="quote" style="font-size:20px; font-weight:700;"></div>
+      </div>
+      <div class="card col-1">
+        <div style="font-weight:700; margin-bottom:6px;">📅 Date</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input id="dateInput" type="date" class="input" />
+          <button id="todayBtn" class="btn">Today</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:16px;">
+      <div class="card col-2">
+        <div style="font-weight:700; margin-bottom:10px;">📝 Quick Entry — <span id="dateLabel"></span></div>
+        <div class="grid grid-4">
+          <div>
+            <label>Team Member</label>
+            <select id="memberSelect" class="select"></select>
+          </div>
+          <div><label>Medicare Submitted</label><input id="med_sub" type="number" class="input" /></div>
+          <div><label>Medicare Approved</label><input id="med_app" type="number" class="input" /></div>
+          <div><label>Life Submitted</label><input id="life_sub" type="number" class="input" /></div>
+          <div><label>Life Presentations</label><input id="life_pres" type="number" class="input" /></div>
+          <div><label>Life AP ($)</label><input id="life_ap" type="number" step="50" class="input" /></div>
+          <div><label>Hospital Indemnity Plans</label><input id="hi_plans" type="number" class="input" /></div>
+          <div><label>CHAS Plans</label><input id="chas_plans" type="number" class="input" /></div>
+          <div><label>Transfers</label><input id="transfers" type="number" class="input" /></div>
+        </div>
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+          <button id="saveBtn" class="btn">Save Today</button>
+          <span id="savedBadge" class="ok">Saved ✅</span>
+        </div>
+      </div>
+
+      <div class="card col-1">
+        <div style="font-weight:700; margin-bottom:6px;">👥 Team</div>
+        <div style="display:flex; gap:8px;">
+          <input id="newMember" placeholder="Add teammate (max 50)" class="input" />
+          <button id="addMemberBtn" class="btn">Add</button>
+        </div>
+        <div id="teamList" class="list" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:16px;">
+      <div class="card col-2">
+        <div style="font-weight:700; margin-bottom:6px;">🏆 Daily Leaderboard <span id="lbDate" class="badge"></span></div>
+        <ol id="dailyLB" style="padding-left:18px;"></ol>
+      </div>
+      <div class="card col-1">
+        <div style="font-weight:700; margin-bottom:6px;">🏅 All-Time Leaderboard</div>
+        <ol id="allLB" style="padding-left:18px;"></ol>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:16px;">
+      <div class="card col-2">
+        <div style="font-weight:700; margin-bottom:6px;">📅 Today Breakdown</div>
+        <div id="todayBox" class="muted"></div>
+      </div>
+      <div class="card col-1">
+        <div style="font-weight:700; margin-bottom:6px;">ℹ️ Tips</div>
+        <div class="muted">
+          • Add teammates on the right.<br/>
+          • Select a teammate in Quick Entry before saving.<br/>
+          • Use Export JSON to back up your data.<br/>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin: 18px 0; color:#94a3b8; font-size: 12px;">
+      © <span id="year"></span> Waves of Protection Insurance — Team Tracker
+    </div>
+  </div>
+
+  <script>
+    // ===== Utilities (ES5-safe) =====
+    var APP_KEY = "waves-legacy-v1";
+    var QUOTES = [
+      "Small steps every day lead to big wins.",
+      "Serve first. Success follows.",
+      "Consistency beats intensity.",
+      "Your future self is watching. Make them proud.",
+      "Excellence is a habit—build it today.",
+      "Win the day. Then repeat.",
+      "People don’t care how much you know until they know how much you care.",
+      "You miss 100% of the shots you don’t take.",
+      "Make today count—for your clients and your goals.",
+      "Discipline is choosing what you want most over what you want now."
+    ];
+    var DEFAULT_MEMBERS = [
+      {id:"m1", name:"Chase Ray", active:true},
+      {id:"m2", name:"Garrett", active:true},
+      {id:"m3", name:"Francis", active:true},
+      {id:"m4", name:"Bailey", active:true},
+      {id:"m5", name:"BFree", active:true}
+    ];
+
+    function $(id){ return document.getElementById(id); }
+    function todayISO(){ return new Date().toISOString().slice(0,10); }
+    function dateLabel(iso){ return new Date(iso+"T00:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
+    function genId(){ return "m" + String(new Date().getTime()) + String(Math.floor(Math.random()*1e6)); }
+    function storageAvailable(){
+      try { localStorage.setItem("__test__", "1"); localStorage.removeItem("__test__"); return true; }
+      catch(e){ return false; }
+    }
+
+    // ===== State =====
+    var state = { members: [], entries: {} }; // entries keyed "date|memberId"
+
+    function load(){
+      if (!storageAvailable()) {
+        $("warn").style.display = "block";
+        state = { members: DEFAULT_MEMBERS.slice(), entries: {} };
+        return;
+      }
+      try {
+        var raw = localStorage.getItem(APP_KEY);
+        if (raw) state = JSON.parse(raw);
+      } catch(e){}
+      if (!state || !state.members) state = { members: [], entries: {} };
+      if (!state.members.length) state.members = DEFAULT_MEMBERS.slice();
+      if (!state.entries) state.entries = {};
+    }
+    function save(){
+      if (!storageAvailable()) return;
+      try { localStorage.setItem(APP_KEY, JSON.stringify(state)); } catch(e){}
+    }
+
+    // ===== Rendering =====
+    function ensureMemberOptions(){
+      var sel = $("memberSelect");
+      var html = "<option value=''>Select member</option>";
+      for (var i=0;i<state.members.length;i++){
+        var m = state.members[i];
+        html += "<option value='" + m.id + "'>" + m.name + (m.active?"":" (inactive)") + "</option>";
+      }
+      sel.innerHTML = html;
+    }
+    function renderTeamList(){
+      var box = $("teamList");
+      box.innerHTML = "";
+      for (var i=0;i<state.members.length;i++){
+        (function(m){
+          var row = document.createElement("div");
+          row.className = "rowline";
+          row.innerHTML =
+            "<div style='display:flex; align-items:center; gap:8px;'>" +
+              "<input type='checkbox' "+(m.active?"checked":"")+" data-id='"+m.id+"' class='toggleActive'/>" +
+              "<span style='font-weight:600;'>" + m.name + "</span>" +
+              (m.active?"":" <span style='font-size:12px; color:#94a3b8'>(inactive)</span>") +
+            "</div>" +
+            "<button data-id='"+m.id+"' class='del btn' style='background:#1f2937;'>🗑</button>";
+          box.appendChild(row);
+        })(state.members[i]);
+      }
+      // bind
+      var toggles = box.getElementsByClassName("toggleActive");
+      for (var t=0;t<toggles.length;t++){
+        toggles[t].addEventListener("change", function(e){
+          var id = e.target.getAttribute("data-id");
+          for (var j=0;j<state.members.length;j++){
+            if (state.members[j].id===id){ state.members[j].active = e.target.checked; break; }
+          }
+          save(); ensureMemberOptions(); renderTeamList(); updateAll();
+        });
+      }
+      var dels = box.getElementsByClassName("del");
+      for (var d=0; d<dels.length; d++){
+        dels[d].addEventListener("click", function(e){
+          var id = e.target.getAttribute("data-id");
+          var arr = []; for (var j=0;j<state.members.length;j++){ if (state.members[j].id!==id) arr.push(state.members[j]); }
+          state.members = arr;
+          save(); ensureMemberOptions(); renderTeamList(); updateAll();
+        });
+      }
+    }
+
+    function getEntry(date, memberId){
+      var k = date + "|" + memberId;
+      if (state.entries[k]) return state.entries[k];
+      return {
+        date: date, memberId: memberId,
+        medicare: {submitted:0, approved:0},
+        life: {submitted:0, presentations:0, ap:0},
+        hospital: {plans:0},
+        chas: {plans:0},
+        transfers: 0
+      };
+    }
+    function saveEntry(e){
+      var k = e.date + "|" + e.memberId;
+      state.entries[k] = e;
+      save();
+    }
+
+    function perDateTotals(){
+      var map = {};
+      var keys = Object.keys(state.entries);
+      for (var i=0;i<keys.length;i++){
+        var e = state.entries[keys[i]];
+        if (!map[e.date]) map[e.date] = {date:e.date, ms:0, ma:0, ls:0, lp:0, ap:0, hi:0, ch:0, tr:0};
+        map[e.date].ms += e.medicare.submitted;
+        map[e.date].ma += e.medicare.approved;
+        map[e.date].ls += e.life.submitted;
+        map[e.date].lp += e.life.presentations;
+        map[e.date].ap += e.life.ap;
+        map[e.date].hi += e.hospital.plans;
+        map[e.date].ch += e.chas.plans;
+        map[e.date].tr += e.transfers;
+      }
+      var out = []; var k2 = Object.keys(map).sort();
+      for (var j=0;j<k2.length;j++){ out.push(map[k2[j]]); }
+      return out;
+    }
+
+    function computeLeaderboard(dateFilter){
+      var map = {};
+      var keys = Object.keys(state.entries);
+      for (var i=0;i<keys.length;i++){
+        var e = state.entries[keys[i]];
+        if (dateFilter && e.date!==dateFilter) continue;
+        if (!map[e.memberId]) map[e.memberId] = {memberId:e.memberId, ms:0, ma:0, ls:0, lp:0, ap:0, hi:0, ch:0, tr:0, total:0, points:0};
+        var r = map[e.memberId];
+        r.ms += e.medicare.submitted;
+        r.ma += e.medicare.approved;
+        r.ls += e.life.submitted;
+        r.lp += e.life.presentations;
+        r.ap += e.life.ap;
+        r.hi += e.hospital.plans;
+        r.ch += e.chas.plans;
+        r.tr += e.transfers;
+        r.total += e.medicare.submitted + e.life.submitted + e.hospital.plans + e.chas.plans;
+      }
+      // points
+      var POINTS = { medicare_submitted:1, medicare_approved:3, life_submitted:2, life_presentations:0.5, life_ap_per_100:1, hi_plans:1.5, chas_plans:1.5, transfers:0.5 };
+      var rows = []; var ids = Object.keys(map);
+      for (var j=0;j<ids.length;j++){
+        var r = map[ids[j]];
+        r.points =
+          r.ms * POINTS.medicare_submitted +
+          r.ma * POINTS.medicare_approved +
+          r.ls * POINTS.life_submitted +
+          r.lp * POINTS.life_presentations +
+          Math.floor(r.ap/100) * POINTS.life_ap_per_100 +
+          r.hi * POINTS.hi_plans +
+          r.ch * POINTS.chas_plans +
+          r.tr * POINTS.transfers;
+        rows.push(r);
+      }
+      rows.sort(function(a,b){ return b.points - a.points; });
+      return rows;
+    }
+
+    function sumForDate(date){
+      var res = {ms:0,ma:0,ls:0,lp:0,ap:0,hi:0,ch:0,tr:0};
+      var keys = Object.keys(state.entries);
+      for (var i=0;i<keys.length;i++){
+        var e = state.entries[keys[i]];
+        if (e.date!==date) continue;
+        res.ms+=e.medicare.submitted; res.ma+=e.medicare.approved;
+        res.ls+=e.life.submitted; res.lp+=e.life.presentations; res.ap+=e.life.ap;
+        res.hi+=e.hospital.plans; res.ch+=e.chas.plans; res.tr+=e.transfers;
+      }
+      return res;
+    }
+
+    function renderLeaderboard(elId, rows){
+      var box = $(elId);
+      box.innerHTML = "";
+      if (!rows.length){ box.innerHTML = "<li style='color:#94a3b8;'>No stats yet.</li>"; return; }
+      for (var i=0;i<rows.length;i++){
+        var r = rows[i];
+        var name = r.memberId;
+        for (var j=0;j<state.members.length;j++){ if (state.members[j].id===r.memberId){ name = state.members[j].name; break; } }
+        var rank = (i===0?"🥇":(i===1?"🥈":(i===2?"🥉":(i+1)+".")));
+        var li = document.createElement("li");
+        li.style.marginBottom = "6px";
+        li.innerHTML =
+          "<div style='display:flex; align-items:center; justify-content:space-between; background:#0b1220; border:1px solid #1f2937; padding:6px 10px; border-radius:8px;'>" +
+            "<div style='display:flex; align-items:center; gap:8px;'>" +
+              "<div style='width:28px; text-align:center; font-size:18px;'>" + rank + "</div>" +
+              "<div><div style='font-weight:700;'>" + name + "</div>" +
+              "<div style='font-size:12px; color:#94a3b8;'>Pts: " + Math.round(r.points*10)/10 + " • Med Approvals: " + r.ma + " • Life AP: $" + r.ap.toLocaleString() + "</div></div>" +
+            "</div>" +
+            "<div style='font-size:13px; color:#e5e7eb;'>Apps: " + r.total + " | Transfers: " + r.tr + "</div>" +
+          "</div>";
+        box.appendChild(li);
+      }
+    }
+
+    function updateAll(){
+      var d = $("dateInput").value || todayISO();
+      $("dateLabel").innerHTML = dateLabel(d);
+      $("lbDate").innerHTML = dateLabel(d);
+
+      var dd = new Date(d);
+      var hash = (dd.getFullYear()*10000 + (dd.getMonth()+1)*100 + dd.getDate()) % QUOTES.length;
+      $("quote").innerHTML = QUOTES[hash];
+
+      var s = sumForDate(d);
+      $("todayBox").innerHTML = 
+        "Medicare — Submitted: <b>" + s.ms + "</b>, Approved: <b>" + s.ma + "</b><br/>" +
+        "Life — Submitted: <b>" + s.ls + "</b>, Presentations: <b>" + s.lp + "</b>, AP: <b>$" + s.ap.toLocaleString() + "</b><br/>" +
+        "HI/CHAS — HI Plans: <b>" + s.hi + "</b>, CHAS Plans: <b>" + s.ch + "</b>, Transfers: <b>" + s.tr + "</b>";
+
+      var daily = computeLeaderboard(d);
+      var all = computeLeaderboard(null);
+      renderLeaderboard("dailyLB", daily);
+      renderLeaderboard("allLB", all);
+    }
+
+    // ===== Events =====
+    function bind(){
+      $("todayBtn").addEventListener("click", function(){
+        $("dateInput").value = todayISO();
+        updateAll();
+      });
+
+      $("saveBtn").addEventListener("click", function(){
+        var date = $("dateInput").value || todayISO();
+        var memberId = $("memberSelect").value;
+        if (!memberId){
+          // auto-select first active or create a default
+          var first = null, i=0;
+          for (i=0;i<state.members.length;i++){ if (state.members[i].active){ first = state.members[i]; break; } }
+          if (!first && state.members.length) first = state.members[0];
+          if (first){ memberId = first.id; $("memberSelect").value = memberId; }
+          else {
+            var id = genId();
+            state.members = [{id:id, name:"You", active:true}];
+            ensureMemberOptions(); renderTeamList();
+            memberId = id; $("memberSelect").value = id;
+          }
+        }
+        var e = getEntry(date, memberId);
+        e.medicare.submitted = +($("med_sub").value||0);
+        e.medicare.approved  = +($("med_app").value||0);
+        e.life.submitted     = +($("life_sub").value||0);
+        e.life.presentations = +($("life_pres").value||0);
+        e.life.ap            = +($("life_ap").value||0);
+        e.hospital.plans     = +($("hi_plans").value||0);
+        e.chas.plans         = +($("chas_plans").value||0);
+        e.transfers          = +($("transfers").value||0);
+        saveEntry(e);
+        updateAll();
+        $("savedBadge").style.display = "inline";
+        setTimeout(function(){ $("savedBadge").style.display = "none"; }, 1400);
+      });
+
+      function addMember(){
+        var name = ($("newMember").value||"").trim();
+        if (!name) return;
+        if (state.members.length>=50){ alert("Limit of 50 team members reached."); return; }
+        // prevent dup names
+        var i=0; for(i=0;i<state.members.length;i++){ if (state.members[i].name.toLowerCase()===name.toLowerCase()){ alert("That name already exists."); return; } }
+        var id = genId();
+        state.members.push({id:id, name:name, active:true});
+        $("newMember").value = "";
+        save(); ensureMemberOptions(); renderTeamList(); updateAll();
+      }
+      $("addMemberBtn").addEventListener("click", addMember);
+      $("newMember").addEventListener("keydown", function(e){ if(e.keyCode===13){ e.preventDefault(); addMember(); }});
+
+      $("importInput").addEventListener("change", function(e){
+        var file = e.target.files && e.target.files[0]; if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(){
+          try {
+            var obj = JSON.parse(String(reader.result));
+            state = { members: obj.members||[], entries: obj.entries||{} };
+            save(); ensureMemberOptions(); renderTeamList(); updateAll();
+            alert("Imported ✅");
+          } catch(err){ alert("Invalid JSON file."); }
+        };
+        reader.readAsText(file);
+      });
+
+      $("exportBtn").addEventListener("click", function(){
+        var blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = "waves-tracker-data.json"; a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      $("dateInput").addEventListener("change", updateAll);
+      $("memberSelect").addEventListener("change", function(){
+        var date = $("dateInput").value || todayISO();
+        var memberId = $("memberSelect").value;
+        if (!memberId) return;
+        var e = getEntry(date, memberId);
+        $("med_sub").value = e.medicare.submitted;
+        $("med_app").value = e.medicare.approved;
+        $("life_sub").value = e.life.submitted;
+        $("life_pres").value = e.life.presentations;
+        $("life_ap").value = e.life.ap;
+        $("hi_plans").value = e.hospital.plans;
+        $("chas_plans").value = e.chas.plans;
+        $("transfers").value = e.transfers;
+      });
+    }
+
+    // ===== Init =====
+    (function(){
+      $("year").innerHTML = new Date().getFullYear();
+      $("dateInput").value = todayISO();
+      load();
+      ensureMemberOptions();
+      renderTeamList();
+      bind();
+      updateAll();
+    })();
+  </script>
+</body>
+</html>
